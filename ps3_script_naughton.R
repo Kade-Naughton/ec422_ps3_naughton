@@ -261,3 +261,79 @@ can_gas |>
     title = "Subseries Plot: Canadian Gas Production",
     y = "log(Volume)"
   )
+
+# X_13ARIMA_SEATS and plot
+retail_nsa_x13 <- retail_ts |>
+  filter(series_id == "RSAFSNA") |>
+  model(x13 = X_13ARIMA_SEATS(sales)) |>
+  components()
+
+retail_nsa_x13 |> autoplot()
+
+## Seasonal change is largest in December at 1.13–1.15 (13–15% above the trend). Although the overall size of seasonal variations is consistent over time, 
+## and the December spike has shrunk in recent years.
+
+# Compare our ARIMA vs official SA
+sa_compare <- retail_nsa_x13 |>
+  as_tibble() |>
+  select(Month, mine = season_adjust) |>
+  left_join(
+    retail_ts |>
+      filter(series_id == "RSAFS") |>
+      as_tibble() |>
+      transmute(Month, census = sales),
+    by = "Month"
+  ) |>
+  mutate(pct_diff = 100 * (log(mine) - log(census)))
+
+sa_compare |>
+  ggplot(aes(x = Month, y = pct_diff)) +
+  geom_line() +
+  labs(
+    title = "My X-13 Seasonal Adjustment Minus the Census Bureau's",
+    x = NULL, y = "Difference (%)"
+  ) +
+  theme_minimal()
+
+## My model matches pretty close with most of the difference being under 1% the whole series. The biggest discrepancies come around and after 2020, 
+## which is no surprise in economics at this point.
+
+# Linear trend and seasonal dummies
+can_gas_fit <- can_gas |>
+  model(TSLM(log_volume ~ trend() + season()))
+
+report(can_gas_fit)
+
+can_gas_fit |>
+  tidy() |>
+  select(term, estimate, std.error, statistic, p.value) |>
+  knitr::kable(digits = 3)
+
+## The estimated growth given via the trend is 0.004 which means its around 0.40% per month. The most significant seasonal effect is in June
+## t=-4.777 with it being around 25% below the trend.
+
+# Fitted vals against actual data
+can_gas_fit |>
+  augment() |>
+  ggplot(aes(x = Month)) +
+  geom_line(aes(y = log_volume, color = "Actual")) +
+  geom_line(aes(y = .fitted, color = "Fitted")) +
+  labs(title = "Linear Trend + Seasonal Dummies Fit: Canadian Gas Production",
+       y = "log(Volume)", color = NULL) +
+  theme_minimal()
+
+## The linear model captures the overall trend and seasonal times but fits poorly over longer periods. It over predicts in the 1960s and after 2000, 
+## under predicts in the 1970s, and over shoots seasonal swings in the 1990s-2000s by forcing that fixed seasonal factor.
+
+# Residuals for ljung-box
+can_gas_fit |> gg_tsresiduals()
+
+can_gas_fit |>
+  augment() |>
+  features(.innov, ljung_box, lag = 24)
+
+## The residuals do not seem to be white noise. The plot show long and slow waves that persist for years. Also the ACF beigns at ~0.98 at lag = 1 and 
+## decomposes super slowly so there is still an obvious structure.The Ljung–Box stat is around 7,774 with a p-val of basically 0, so at the 5% level 
+## we reject the null hypothesis of the residuals being white noise.
+
+# git push 5
