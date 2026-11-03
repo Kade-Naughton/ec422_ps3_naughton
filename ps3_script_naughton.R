@@ -133,7 +133,7 @@ can_gas |>
 ## Seasonal swings grow as the series does only during the first part of the sample. During 1960-1980 the swings get much larger as the cubic meters grow.
 ## After the late 1980s, the swings decrease back to a more consistent variation, meaning swings are not proportion with respect to the entire sample. 
 
-# Add log(Volume) col
+# Define log(Volume) col
 can_gas <- can_gas |>
   mutate(log_volume = log(Volume))
 
@@ -148,5 +148,75 @@ can_gas |>
 ## plot, apart from the region between 1970 and 1990. That being said, I think the changes point to logging being a good choice, as it makes anomalies
 ## and obvious differences between time periods less dramatic, and gives a percentage base to compare different times off of.
 
+# git push 3 
 
+# Log for retail data (define and plot)
+retail_nsa <- retail_ts |>
+  filter(series_id == "RSAFSNA") |>
+  mutate(log_sales = log(sales))
+
+retail_nsa |>
+  autoplot(sales) +
+  labs(title = "NSA Retail Sales (Level)",
+       x = NULL, y = "Millions of dollars") +
+  theme_minimal()
+
+retail_nsa |>
+  autoplot(log_sales) +
+  labs(title = "NSA Retail Sales (Log)",
+       x = NULL, y = "log(sales)") +
+  theme_minimal()
+
+## The case for logging is stronger because before logging, the December spikes looked much larger as time went on, which is misleading. While the 
+## overall dollar amount grew, the actual percentage of the sales spike becomes very consistent after the log, which more accurately shows growth, or 
+## lack thereof. 
+
+# Month to month percentage growth rates can_gas
+can_gas <- can_gas |>
+  mutate(
+    growth_direct = 100 * difference(Volume) / lag(Volume),
+    growth_logdiff = 100 * difference(log_volume)
+  )
+
+can_gas |>
+  autoplot(growth_direct) +
+  labs(
+    title = "Month-over-Month Growth: Canadian Gas Production",
+    x = NULL, y = "Growth rate (%)"
+  ) +
+  theme_minimal()
+
+can_gas <- can_gas |>
+  mutate(growth_gap = abs(growth_direct - growth_logdiff))
+
+can_gas |>
+  autoplot(growth_gap) +
+  labs(
+    title = "Gap Between Direct and Log-Difference Growth Rates",
+    x = NULL, y = "Absolute difference (percentage points)"
+  ) +
+  theme_minimal()
+
+## In most months the log difference is good, but because a lot of the time monthly growth is large the gap gets up to 2-3 percentage points during
+## the months with the largest spikes/jumps. 
+
+# Month over month log diff for retail_ts
+retail_ts <- retail_ts |>
+  group_by_key() |>
+  mutate(growth_mom = 100 * difference(log(sales))) |>
+  ungroup()
+
+retail_ts |>
+  autoplot(growth_mom) +
+  labs(
+    title = "Month-over-Month Growth: SA vs. NSA Retail Sales",
+    x = NULL, y = "Growth rate (%)", color = NULL
+  ) +
+  theme_minimal()
+
+## NSA growth is way more noisy than SA's. It varies by double digits almost every year while SA sits pretty consistently in +/- 1-3% range. Its more noisy because 
+## it contains that sales spike in December around the holidays, and doesnt adjust anything to account for that factor. Seasonal adjustment removes those 
+## trends so it is much smoother.
+
+# git push 4
 
