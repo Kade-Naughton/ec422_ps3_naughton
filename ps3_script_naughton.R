@@ -220,3 +220,44 @@ retail_ts |>
 
 # git push 4
 
+# Plot seasonal pattern NSA sales
+retail_ts |>
+  filter(series_id == "RSAFSNA") |>
+  gg_season(sales) +
+  labs(
+    title = "Seasonal Pattern in NSA Retail Sales",
+    y = "Millions of dollars"
+  ) +
+  theme_minimal()
+
+# Plot seasonal pattern SA sales
+retail_ts |>
+  filter(series_id == "RSAFS") |>
+  gg_season(sales) +
+  labs(
+    title = "Seasonal Pattern in SA Retail Sales",
+    y = "Millions of dollars"
+  ) +
+  theme_minimal()
+
+## The NSA series shows a clear and repeating seasonal pattern which dips in January to February, then trends upward in the middle of the year, and spikes in December. 
+## Once seasonally adjusted, the SA series flattens out across each year, which shows/proves the removal of the seasonal pattern.
+
+# Seasonal pattern Canadian gas
+can_gas |>
+  gg_season(log_volume) +
+  labs(
+    title = "Seasonal Pattern in Canadian Gas Production",
+    y = "log(Volume)"
+  ) +
+  theme_minimal()
+
+## Production seems to be higher in the winter and lower in the summer. This makes sense because most people are going to heat their homes in the winter, 
+## which would drive gas use, and thus production.
+
+can_gas |>
+  gg_subseries(log_volume) +
+  labs(
+    title = "Subseries Plot: Canadian Gas Production",
+    y = "log(Volume)"
+  )
