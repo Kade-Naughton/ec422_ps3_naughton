@@ -105,5 +105,48 @@ retail_ts |>
 ## (Covid Recession, 2008 Crisis, etc).
 ## Seasonal adjustment removes only the repeating within-year pattern and not the overall patterns year to year.
 
+# git push 2 
+
+# Plot for Canadian gas production can_gas
+can_gas |>
+  autoplot(Volume) +
+  labs(
+    title = "Canadian Natural Gas Production",
+    subtitle = "Monthly, January 1960 – February 2005",
+    x = NULL, y = "Billions of cubic metres") +
+  theme_minimal()
+
+# Add geom_smooth to add trend line
+can_gas |>
+  autoplot(Volume) +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(
+    title = "Canadian Natural Gas Production with Smoothed Trend",
+    x = NULL, y = "Billions of cubic metres"
+  ) +
+  theme_minimal()
+
+## I choose to include a geom_smooth layer which adds a smoothed trendline that follows the data and makes long-run variation and trends easier to 
+## see. 
+
+
+## Seasonal swings grow as the series does only during the first part of the sample. During 1960-1980 the swings get much larger as the cubic meters grow.
+## After the late 1980s, the swings decrease back to a more consistent variation, meaning swings are not proportion with respect to the entire sample. 
+
+# Add log(Volume) col
+can_gas <- can_gas |>
+  mutate(log_volume = log(Volume))
+
+# Plot log(Volume)
+can_gas |>
+  autoplot(log_volume) +
+  labs(title = "Log of Canadian Natural Gas Production",
+       x = NULL, y = "log(Volume)") +
+  theme_minimal()
+
+## With logging, the steepness of the growth in certain times, like mid 1990s-2000s, are greatly flattened. The swings now look more consistent across the
+## plot, apart from the region between 1970 and 1990. That being said, I think the changes point to logging being a good choice, as it makes anomalies
+## and obvious differences between time periods less dramatic, and gives a percentage base to compare different times off of.
+
 
 
