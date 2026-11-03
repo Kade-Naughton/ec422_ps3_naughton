@@ -337,3 +337,49 @@ can_gas_fit |>
 ## we reject the null hypothesis of the residuals being white noise.
 
 # git push 5
+
+# Expanding window TS-CV
+gas_cv_fc <- can_gas |>
+  select(Month, Volume) |>
+  stretch_tsibble(.init = 240, .step = 1) |>
+  model(snaive = SNAIVE(Volume),
+        tslm   = TSLM(log(Volume) ~ trend() + season())) |>
+  forecast(h = 1)
+
+gas_cv_fc |>
+  accuracy(can_gas, measures = list(MAE = MAE, RMSE = RMSE))
+
+## First forecast is for Jan 1980 and the last is for Feb 2005. SNAIVE model (MAE = 0.562, RMSE = 0.702) forecast seems to be a lot more accurate than
+## the previous linear model (MAE = 4.01, RMSE = 4.36) The two meterics seem to agree.
+
+# Diebold–Mariano test p=1
+errs <- gas_cv_fc |>
+  as_tibble() |>
+  left_join(as_tibble(can_gas) |> select(Month, actual = Volume),
+            by = "Month") |>
+  mutate(e = actual - .mean) |>
+  select(Month, .model, e) |>
+  pivot_wider(names_from = .model, values_from = e) |>
+  na.omit()
+
+forecast::dm.test(errs$snaive, errs$tslm, h = 1, power = 1)
+
+## DM = -31.278 and p-val = 2.2e-16 which means we fail to reject the null hypothesis that the models forecasts accuately at an equal level. The SNAIVE
+## model has smaller absolute errors because of the negative stat which means its more accurate that the linear trend model.
+
+# Rolling window instead
+gas_cv_fc_roll <- can_gas |>
+  select(Month, Volume) |>
+  slide_tsibble(.size = 240, .step = 1) |>
+  model(snaive = SNAIVE(Volume),
+        tslm   = TSLM(log(Volume) ~ trend() + season())) |>
+  forecast(h = 1)
+
+gas_cv_fc_roll |>
+  accuracy(can_gas, measures = list(MAE = MAE, RMSE = RMSE))
+
+## When using a rolling window the SNAIVE accuracy stays the same. The linear trend with dummies model gets a lot better (MAE = 2.09, RMSE = 2.42). The TSLM
+## model changed more beause the trend is not a singular straight line. With an expanding window the rapid change in growth in the 1960s keeps estimating the 
+## trend too high. The 20 year windows drops the old problematic data and only fits the recent trend.
+
+# git push 6
